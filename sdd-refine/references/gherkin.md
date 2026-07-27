@@ -8,9 +8,8 @@ the definition of done, and they are read by people who do not know how the code
 Every scenario must answer *"what does the user experience?"* — never *"how is it built?"*
 
 A useful check: would this scenario survive a complete rewrite of the implementation? If
-swapping localStorage for a cookie, or CSS Grid for Flexbox, would break the scenario,
-then the scenario is describing implementation and belongs in the feature's `readme.md`
-instead.
+swapping localStorage for a cookie, or CSS Grid for Flexbox, would break the scenario, then
+the scenario is describing implementation and belongs in the feature's `readme.md` instead.
 
 ## Bad → good
 
@@ -59,8 +58,8 @@ Cenário: Filtrar episódios por status para achar os que estão em aberto
 
 ## Scenario Outline over duplication
 
-When scenarios differ only by a value, collapse them. Six near-identical scenarios hide
-the one that is actually different.
+When scenarios differ only by a value, collapse them. Six near-identical scenarios hide the
+one that is actually different.
 
 ```gherkin
 Esquema do Cenário: Filtrar episódios por status
@@ -77,22 +76,22 @@ Esquema do Cenário: Filtrar episódios por status
 
 ## Coverage worth having
 
-Aim for the top user-observable behaviors, not exhaustive combinatorics — typically 5 to
-12 scenarios for a Medium cycle. Make sure these are among them:
+Aim for the top user-observable behaviors, not exhaustive combinatorics — typically 5 to 12
+scenarios for a Medium cycle. Make sure these are among them:
 
 - The happy path, stated plainly.
-- The empty state (no data yet) — the most commonly forgotten scenario, and the one users
-  hit first on a fresh account.
+- The empty state (no data yet) — the most commonly forgotten scenario, and the one users hit
+  first on a fresh account.
 - The failure state (source unavailable) — what the user sees, not the status code.
 - The permission boundary, if roles differ.
 - Each distinct user-facing action the request asked for.
 
 ## Keywords and language
 
-Content in the human's language. Keywords follow whatever the project's runner is
-configured for. If the repo already has `.feature` files, match them exactly. If not and
-the language is unclear, use English keywords with Portuguese content — every
-Cucumber-family runner accepts that, and it avoids a broken parse on the first run.
+Content in the human's language. Keywords follow whatever the project's runner is configured
+for. If the repo already has `.feature` files, match them exactly. If not and the language is
+unclear, use English keywords with Portuguese content — every Cucumber-family runner accepts
+that, and it avoids a broken parse on the first run.
 
 Portuguese keywords, if the runner is configured for `pt`:
 `Funcionalidade`, `Cenário`, `Esquema do Cenário`, `Exemplos`, `Dado`, `Quando`, `Então`, `E`, `Mas`.
