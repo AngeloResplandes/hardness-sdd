@@ -1,26 +1,20 @@
 # Tarefas — <nome da feature>
 
 <!--
-Checklist ordenado e executável. Cada item cita arquivos ou módulos concretos.
+Checklist ordenado e executável, para ciclos Small e Medium.
+Ciclos Large usam tasks-staged.md.
 
-Small/Medium: lista plana.
-Large: seções "## Stage N", cada uma revisável e mergeável de forma independente.
+Cada item cita arquivos ou módulos concretos e é executável por um agente
+competente sem precisar perguntar de novo.
 
 A ordem importa — cada tarefa assume que as anteriores já existem.
--->
 
-## Stage 1 — <nome do estágio>
+A última tarefa é sempre a promoção da spec, verbatim, e é a única tarefa
+que a fase Implement não marca. Não acrescente nada depois dela: Validate
+e Promote são fases, não tarefas, e listá-las aqui embaralha as duas coisas.
+-->
 
 - [ ] <tarefa concreta, citando arquivo/módulo>
 - [ ] <tarefa concreta>
 - [ ] <teste que cobre o cenário X de scenarios.feature>
-
-## Stage 2 — <nome do estágio>
-
-- [ ] <tarefa concreta>
-
-## Encerramento
-
-- [ ] Rodar a suíte de testes e registrar o resultado
-- [ ] Executar a fase Validate e gerar `validation.md`
 - [ ] Promover `spec-delta.md` para `spec/` (fase Promote — só após Validate passar)

@@ -1,5 +1,6 @@
 ---
 result: pass | fail
+attempt: 1
 validated_at: <yyyy-mm-dd>
 ---
 
@@ -29,6 +30,14 @@ validated_at: <yyyy-mm-dd>
      explicitamente em vez de omitir a linha. -->
 
 `<comando>` — <resultado>
+
+## Resolvido desde a última validação
+
+<!-- Só a partir da tentativa 2. Uma linha por lacuna da rodada anterior,
+     com como você verificou que fechou. Lacuna ainda aberta não some daqui:
+     ela continua listada em Pendências. -->
+
+- N/A (primeira validação).
 
 ## Divergências do plano
 

@@ -9,6 +9,28 @@ This is the phase that earns the whole harness its keep: it is where ambiguity g
 while it is still cheap. It ends by **stopping** — refine that flows straight into
 implementation has removed the only review point that matters.
 
+## Invariants binding this phase
+
+1. **You do not write inside `spec/`.** Before any Write or Edit, check the path — if it
+   starts with `spec/`, stop. The proposal goes in `spec-delta.md`; `sdd-promote` applies it
+   after validation passes. Writing it now would make the canonical spec assert behavior that
+   does not exist yet.
+2. **No implementation before a human approves `plan.md`.** You raise the gate and record the
+   approval in the file. You never walk through it.
+3. **Ask every question in ONE message.**
+4. **`scenarios.feature` describes what the user experiences, never how it is built.**
+
+## Step 0 — Resolve which cycle you are in
+
+1. If the user named a cycle, use that.
+2. Otherwise take the newest folder under `cycles/` — newest **by folder name** (the
+   `Q{q}{yyyy}/{MMDD}` prefix sorts chronologically), not by filesystem mtime, which changes
+   whenever any file is touched.
+3. If two candidates share the same day and the user did not say which, **ask**. Guessing here
+   means writing a plan into someone else's cycle.
+
+State which cycle you resolved to before doing anything else.
+
 ## Step 1 — Read before asking
 
 Read, in this order:
@@ -25,56 +47,13 @@ their time and erodes their trust in the process.
 
 ## Step 2 — Ask everything in one message
 
-Group the questions under headings, number them so answers can be terse, and send them as a
-single message. Then stop and wait.
+Read `references/questions.md` now. It holds the question areas, how to phrase them so they
+are cheap to answer, and what to do when the human answers only part of the list.
 
-Cover these areas. Drop any that genuinely do not apply — an empty section is noise, and
-padding the list with irrelevant questions trains the human to skim.
+Then send **one** message — grouped under headings, numbered — and stop and wait.
 
-**Produto e escopo**
-- What is explicitly out of scope for this cycle?
-- Who are the user roles involved, and does behavior differ between them?
-- What is the smallest version that would still be worth shipping?
-
-**Dados e integração**
-- Where does the data come from — which service, endpoint, or table?
-- What is the shape of the payload, and who owns that contract?
-- Pagination, sorting, expected volume?
-- What happens when the source is slow, empty, or down?
-
-**UX e comportamento**
-- Empty state, loading state, error state — what does the user see in each?
-- What is the behavior on mobile / small viewport?
-- Which actions are reversible, and is there a confirmation?
-- Accessibility expectations (keyboard navigation, screen reader, contrast)?
-
-**Segurança e conformidade**
-- Who is allowed to see or do this, and where is that enforced — client, server, or both?
-- Does this touch personal or regulated data (PII, health, financial)?
-- What must be audited or logged?
-
-**Testes e rollout**
-- What is the definition of done for QA — automated, manual, or both?
-- Feature flag, gradual rollout, or straight to production?
-- What is the rollback story if it goes wrong?
-
-**Contrato de integração**
-- Public API surface: props, attributes, events, callbacks, return shapes.
-- Is this contract versioned? Who else consumes it?
-- What breaks downstream if it changes later?
-
-Ask for a decision, not a lecture. "Paginação: infinite scroll, botão 'carregar mais', ou sem
-paginação?" gets answered in one word. "Como devemos lidar com paginação?" gets answered with
-a paragraph or with silence.
-
-Where you have a genuine recommendation, state it inline and mark it — the human can then
-just say "todos os defaults, exceto 3 e 7", which is a much cheaper reply than composing
-answers from scratch.
-
-If the human answers only part of the list, do not silently fill the rest. Draft what you
-can, and record every unanswered item in `plan.md` under **Open questions**, with the
-assumption you are proceeding on. Assumptions written down are reviewable; assumptions held
-in your head are not.
+This is invariant 3, and it is the one that protects the human's attention. Fifteen rounds of
+"e se a lista estiver vazia?" costs more than the ambiguity it resolves.
 
 ## Step 3 — Classify the cycle size
 
@@ -126,7 +105,15 @@ An ordered checklist a competent agent could execute without re-asking the human
 names files or modules concretely. The order is load-bearing: each task should land on a
 codebase where its dependencies already exist.
 
-The final task is always, verbatim:
+Pick the template by size — this is the decision from step 3:
+
+- **Small / Medium** → `assets/tasks.md` (flat list, no stages)
+- **Large** → `assets/tasks-staged.md` (`## Stage N` sections)
+
+Do not use stages in a Small or Medium cycle. Stages exist so implementation stops for review
+partway through; a Small cycle that stops twice is friction with nothing on the other side.
+
+The final task is always, verbatim, and always last:
 
 ```markdown
 - [ ] Promover `spec-delta.md` para `spec/` (fase Promote — só após Validate passar)
@@ -134,6 +121,12 @@ The final task is always, verbatim:
 
 It is mandatory because it is the task everyone forgets, and forgetting it is exactly how the
 canonical spec rots.
+
+**Nothing goes after it.** Three skills identify it positionally — `sdd-implement` must not
+check it, `sdd-validate` requires every *other* task checked, `sdd-promote` checks it to close
+the cycle. Adding trailing items ("rodar a suíte", "executar Validate") makes "the final task"
+ambiguous and breaks all three at once. Running the suite and validating are phases with their
+own skills; they are not checklist items.
 
 ### spec-delta.md
 
@@ -177,6 +170,30 @@ Worth telling them where to look hardest:
   after implementation costs a rewrite.
 - **`tasks.md`** — the order matters, and anything that looks too big for one task is.
 
+### Make the approval require having read
+
+A gate only works if passing through it costs attention. "Aprovado" typed reflexively is the
+most common way this whole process degrades into paperwork — all of the cost, none of the
+benefit.
+
+So do not end with a bare "pode aprovar?". End by putting the **two or three most consequential
+decisions** in the plan back as a direct confirmation question:
+
+```
+Confirmo antes de implementar:
+1. Sem paginação no MVP — a lista carrega todos os episódios de uma vez.
+2. O download de documentos aparece só para admin.
+3. Falha da API mostra estado de erro com botão "tentar de novo", não um toast.
+```
+
+Pick the ones that would be expensive to reverse after implementation: scope boundaries,
+permission rules, anything you assumed because the human did not answer. Someone can type
+"aprovado" without reading a plan. They cannot confirm three specific claims without reading
+at least those three.
+
+If any of them came from an assumption rather than an answer, say which — those are the ones
+most likely to be wrong.
+
 ## Step 6 — Record the approval
 
 When the human approves, edit `plan.md` frontmatter:
@@ -195,7 +212,56 @@ cenário 3" as approval of everything else.
 
 Then hand off to `sdd-implement`.
 
+## When the state is broken
+
+| Symptom | Likely cause | What to do |
+|---|---|---|
+| No `request.md` in the cycle folder | Start never ran | Return to `sdd-start`. Do not write the request yourself and refine it in the same breath — you would be reviewing your own understanding instead of the human's. |
+| `request.md` already contains a plan, tasks, or acceptance criteria | Solution written into the problem | Say so. Refine against the *problem* in it and ask the human to confirm the parts you are treating as pre-decided. A request that already answers everything makes this phase theater. |
+| `plan.md` already exists with `status: approved` | Cycle already passed the gate | **PARE.** Re-refining approved work silently invalidates the approval. Ask whether they want to amend the plan (which re-opens the gate: set `status: draft`) or move on to `sdd-implement`. |
+| `plan.md` exists as `draft` | Refine ran before | Not an error. Update the existing artifacts rather than overwriting from scratch — the human may have edited them. |
+| No `spec/` directory anywhere in the repo | Project never had one | Not an error. Say so and offer to bootstrap it. Write `spec-delta.md` anyway, as the seed of the spec that does not exist yet. |
+| The request is a typo fix, dependency bump, or a question | Ceremony applied to trivia | Say so plainly and just do the work. See *When a cycle is the wrong tool*. |
+
+## When a cycle is the wrong tool
+
+A one-line typo fix, a dependency bump, a question about existing code, or exploratory spiking
+does not need a cycle. If the request is one of those, say so and do the work directly instead
+of opening artifacts around it.
+
+This matters here specifically because this skill gets invoked directly ("refina isso") without
+passing through the `sdd` orchestrator — so this is the only place the judgment gets made.
+Ceremony applied to trivia is how good processes get abandoned.
+
+## Closing report
+
+This skill has two distinct endings — the gate, and the approval — and they close differently.
+
+**After drafting the artifacts (step 5), the phase ends at the gate.** That is not `ok`; the
+phase is waiting:
+
+```markdown
+**Fase:** Refine — atenção
+**Resultado:** 4 artefatos escritos. Ciclo classificado como <tamanho>. <N> open questions.
+**Artefatos:** plan.md, scenarios.feature, tasks.md, spec-delta.md
+**Próximo passo:** revise os 4 arquivos e confirme os pontos acima. Nada é implementado até `status: approved`.
+```
+
+Use `atenção` whenever there are open questions — those are assumptions carried into
+implementation, and they deserve to be visible at the moment of approval, not buried in the
+plan.
+
+**After recording the approval (step 6):**
+
+```markdown
+**Fase:** Refine — ok
+**Resultado:** Aprovado e registrado em plan.md (status: approved, approved_at: <data>).
+**Artefatos:** plan.md
+**Próximo passo:** "implementa o ciclo"
+```
+
 ## Files
 
+- `references/questions.md` — the question checklist for step 2
 - `references/gherkin.md` — business-level vs. implementation-level scenarios, with examples
 - `assets/` — templates for the four artifacts

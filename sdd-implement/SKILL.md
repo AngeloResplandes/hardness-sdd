@@ -5,6 +5,25 @@ description: Phase 4 of the SDD harness — executes an approved cycle by workin
 
 # Phase 4 — Implement
 
+## Invariants binding this phase
+
+1. **You do not write inside `spec/`.** Before any Write or Edit, check the path — if it
+   starts with `spec/`, stop. That is `sdd-promote`, and only after validation passes.
+2. **No implementation before a human approves `plan.md`.** The frontmatter is the record,
+   not the conversation.
+3. **`scenarios.feature` is the definition of done** — what the user experiences, not how it
+   is built.
+
+## Which cycle
+
+1. If the user named one, use that.
+2. Otherwise take the newest folder under `cycles/` — newest **by folder name** (the
+   `Q{q}{yyyy}/{MMDD}` prefix sorts chronologically), not by mtime, which changes whenever any
+   file is touched.
+3. Two candidates from the same day and the user did not say which → **ask**.
+
+State which cycle you resolved to before writing any code.
+
 ## Precondition
 
 `plan.md` must have `status: approved`. If it says `draft`, you are in the gate, not in
@@ -13,6 +32,37 @@ approval that exists only in the conversation; the frontmatter is the record.
 
 If the human just said "aprovado" and the file still says draft, record the approval first
 (that is `sdd-refine`'s step 6), then come back here.
+
+## What your scope is
+
+Two different things can bring you here, and they have different scopes:
+
+- **Normal run** — every unchecked task in `tasks.md`, top to bottom.
+- **After a failed validation** — if `validation.md` exists with `result: fail`, your scope is
+  **the gaps it lists**, under `## Correções — validação N` in `tasks.md`. The rest of the
+  checklist is already done and marked; do not re-execute it. Read `validation.md` before
+  touching anything, and work only what it found missing.
+
+Getting this wrong wastes a full cycle of work redoing what already passed.
+
+## When the state is broken
+
+Stop and hand back to the human. Do not improvise around any of these — improvising around a
+gate is the one failure this harness exists to prevent.
+
+| Symptom | Likely cause | What to do |
+|---|---|---|
+| `plan.md` has no `status:` field | Frontmatter hand-edited or truncated | **PARE.** Show it. Ask whether the plan was approved. Never assume a value in either direction. |
+| `status: draft` but tasks already checked | Implementation happened before the gate | **PARE.** List the checked tasks. Ask: approve retroactively, or revert? |
+| `tasks.md` missing or empty | Refine did not finish | Return to `sdd-refine`. Do not author tasks yourself — tasks nobody reviewed are not a plan. |
+| `scenarios.feature` missing | Refine did not finish | Return to `sdd-refine`. Without it you have no definition of done. |
+| A task names a file or module that does not exist | Plan drifted from the codebase | If it is a rename, adjust and note it. If the task no longer makes sense, stop — see *When the plan turns out to be wrong*. |
+| The test suite will not run at all (broken deps, missing config) | Environment problem, not a code problem | **PARE.** Report the actual command and error. Do not check off behavior-changing tasks you could not test, and do not mark them as done-with-caveats. |
+| Same task fails twice in a row | The approach in the plan does not work | **PARE** after the second attempt. Report both attempts and what you learned. Do not keep trying variations — three silent retries burn context and hide the real problem. |
+
+**Stop condition, in general:** if the fix is not obviously mechanical, stop and report rather
+than trying a third approach. The human can unblock in one message; you can burn a whole
+session guessing.
 
 ## Execution discipline
 
@@ -78,3 +128,23 @@ received no longer means anything.
 When every task except the promote task is checked, hand off to `sdd-validate`. Do not
 declare the cycle done — "the tasks are checked" is a claim, and validation is where claims
 get tested.
+
+## Closing report
+
+End every run with this block — including at each stage boundary in a Large cycle.
+
+```markdown
+**Fase:** Implement — <ok | atenção | erro>
+**Resultado:** <N/M tarefas concluídas. Suíte: <comando> — <resultado>.>
+**Artefatos:** <arquivos de código tocados, + tasks.md>
+**Próximo passo:** "valida o ciclo"
+```
+
+`atenção` when the plan diverged, a task was skipped, or the suite has failures you did not
+cause. `erro` when you stopped mid-task.
+
+At a stage boundary the next step is the human's review, not validation — say so:
+`**Próximo passo:** revise o Stage <N> e me diga para seguir.`
+
+Never report `ok` with a failing suite. Put the real output in *Resultado*; a summarized
+failure is a failure the human cannot act on.
