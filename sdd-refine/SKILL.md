@@ -65,7 +65,13 @@ you would not want to land in a single pull request. When torn between two sizes
 larger — an over-structured small cycle costs a few extra headings; an under-structured large
 one costs a 3,000-line review nobody does properly.
 
-Record it in the plan's frontmatter.
+If `cycles/index.md` exists, read it before deciding. It is the only record of how past
+cycles actually went, and the `Validações` column is the useful one: if cycles you sized the
+way you are about to size this one have been needing two or three validation rounds, that is
+evidence your plans at that size are under-specified. Size up, or break the work smaller.
+Writing that column and never reading it makes it bookkeeping instead of feedback.
+
+Record the size in the plan's frontmatter.
 
 ## Step 4 — Draft the four artifacts
 

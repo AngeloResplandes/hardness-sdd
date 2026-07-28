@@ -39,9 +39,17 @@ Two different things can bring you here, and they have different scopes:
 
 - **Normal run** — every unchecked task in `tasks.md`, top to bottom.
 - **After a failed validation** — if `validation.md` exists with `result: fail`, your scope is
-  **the gaps it lists**, under `## Correções — validação N` in `tasks.md`. The rest of the
-  checklist is already done and marked; do not re-execute it. Read `validation.md` before
-  touching anything, and work only what it found missing.
+  **the gaps it lists**, plus any task validation unchecked. Read `validation.md` before
+  touching anything.
+
+  Find your scope like this: take the `attempt:` number from `validation.md`, and work the
+  `## Correções — validação <that number>` section in `tasks.md`. Earlier `Correções` sections
+  are previous rounds — already done and marked. If the section for your attempt number is
+  missing, **stop**: validation failed without making its gaps executable, and guessing which
+  unchecked items it meant is how a cycle silently loses a fix.
+
+  Also work any task **outside** that section that validation unchecked — a box it un-ticked is
+  a box that was not actually true.
 
 Getting this wrong wastes a full cycle of work redoing what already passed.
 

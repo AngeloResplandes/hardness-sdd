@@ -178,9 +178,10 @@ Gera `validation.md` percorrendo cada cenário e registrando *como* foi verifica
 automatizado, verificação manual, ou `NÃO VERIFICADO`. Rodar a suíte é parte do checklist.
 
 `result: fail` é resultado normal — é o checkpoint funcionando. As lacunas viram tarefas de
-verdade no `tasks.md`, numa seção `## Correções — validação N`, e qualquer tarefa que estava
-marcada sem estar pronta é **desmarcada**. Aí é só mandar `implementa o ciclo` de novo: ele
-trabalha só as lacunas, não a checklist inteira.
+verdade no `tasks.md`, numa seção `## Correções — validação N` (o `N` é o número da tentativa,
+então cada rodada ganha a sua), e qualquer tarefa que estava marcada sem estar pronta é
+**desmarcada**. Aí é só mandar `implementa o ciclo` de novo: ele trabalha só as lacunas da
+rodada atual, não a checklist inteira.
 
 Cada rodada incrementa `attempt:` no `validation.md` e registra o que foi resolvido desde a
 anterior. Se um ciclo chega na terceira validação, o sinal não é sobre a implementação — é

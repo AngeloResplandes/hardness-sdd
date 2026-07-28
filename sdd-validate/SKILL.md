@@ -27,6 +27,20 @@ If the user named one, use that. Otherwise take the newest folder under `cycles/
 **by folder name** (`Q{q}{yyyy}/{MMDD}` sorts chronologically), not by mtime. Two candidates
 from the same day and no instruction → ask. State which one you resolved to.
 
+## Step 0 — Read the previous validation first
+
+Before running anything, check whether `validation.md` already exists in the cycle folder.
+
+- **It does not exist** → this is `attempt: 1`.
+- **It exists** → read its `attempt:` and its *Pendências*. Your attempt number is that value
+  **plus one**, and those pendências are what you must account for in *Resolvido desde a
+  última validação*.
+
+Do this before touching the template. The template is written from scratch each run, so an
+attempt number you did not read is an attempt number you have reset — and that counter is the
+only signal in the whole harness about whether refine is producing plans that survive contact
+with the code. Silently resetting it to 1 turns a third failed attempt into a first one.
+
 ## Checklist
 
 **1. Tasks**
@@ -104,20 +118,30 @@ saying "volte para a implementação" leaves `sdd-implement` looking at a checkl
 box is already ticked — it will conclude there is nothing to do and the cycle deadlocks.
 Close the loop yourself:
 
-1. Write the gaps into `tasks.md` as a new section at the end, before the promote task:
+1. Write the gaps into `tasks.md` as a new section at the end, before the promote task. **The
+   N in the heading is your `attempt` number** — not a counter you restart, and not always 1:
 
    ```markdown
-   ## Correções — validação 1
+   ## Correções — validação <N>
 
    - [ ] <lacuna concreta, citando arquivo/módulo e o cenário que ela destrava>
    - [ ] <lacuna concreta>
    ```
+
+   Never reuse a heading that already exists. `sdd-implement` scopes itself to the
+   highest-numbered section, so two sections sharing a number leave it unable to tell finished
+   work from the work you just assigned it.
 
 2. If a gap means a previously checked task was not actually complete, **uncheck it**
    (`- [x]` → `- [ ]`) and say so in your report. A checked box that is not true is worse
    than an unchecked one.
 
 3. Only then hand back to `sdd-implement`, pointing at that section as its scope.
+
+**Before you finish a fail, check your own work:** `tasks.md` must now contain at least one
+unchecked box. If every box is still ticked, you wrote a fail nobody can act on — implement
+will look at a complete checklist, conclude there is nothing to do, and the cycle deadlocks
+between the two phases. Go back and write the gaps as tasks.
 
 Do not touch `spec/` on a fail, under any circumstance.
 

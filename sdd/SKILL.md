@@ -99,12 +99,14 @@ stops instead of being routed into work.
 | 4 | `plan.md` has no `status:` in frontmatter | **ERRO** | Stop. See *When the state is broken*. |
 | 5 | `plan.md` is `draft` **and** any task is checked | **ERRO** | Stop. Implementation happened without a gate. See below. |
 | 6 | `plan.md` is `draft` | **3 — Gate** | Stop. Ask the human to review and approve. Do not code. |
-| 7 | `validation.md` says `result: fail` | **4 — Implement** | `sdd-implement`, scoped to the gaps listed in `validation.md` — not the whole checklist. |
-| 8 | `plan.md` is `approved`, tasks other than promote unchecked | **4 — Implement** | `sdd-implement` |
-| 9 | All tasks except promote checked; no `validation.md`, or it predates the last code change | **5 — Validate** | `sdd-validate` |
-| 10 | `validation.md` is `pass` and `spec-delta.md` is `proposed` | **6 — Promote** | `sdd-promote` |
-| 11 | `validation.md` is `pass` and there is no `spec-delta.md` | **6 — Promote** | Only valid if the cycle genuinely changed nothing described in `spec/`. Confirm that with the human, then close the cycle without promoting. If it did change something, refine skipped an artifact — go back. |
-| 12 | `spec-delta.md` is `promoted`, or the promote task is checked | **Done** | Report and offer to close the branch. |
+| 7 | `validation.md` is `fail`, and its `## Correções — validação N` section has **unchecked** items | **4 — Implement** | `sdd-implement`, scoped to that section — not the whole checklist. |
+| 8 | `validation.md` is `fail`, and its `## Correções — validação N` items are **all checked** | **5 — Validate** | `sdd-validate`. The gaps were worked; re-validate to find out whether they closed. A `fail` whose corrections are done is a stale verdict, not a current one. |
+| 9 | `validation.md` is `fail`, `tasks.md` has **no** `## Correções` section, and every task except promote is checked | **ERRO** | Stop. Validate failed without making its gaps executable — every box is ticked, so implement has nothing to act on and the cycle deadlocks. Re-run `sdd-validate` to write the section. |
+| 10 | `plan.md` is `approved`, tasks other than promote unchecked | **4 — Implement** | `sdd-implement` |
+| 11 | All tasks except promote checked, and no `validation.md` | **5 — Validate** | `sdd-validate` |
+| 12 | `validation.md` is `pass` and `spec-delta.md` is `proposed` | **6 — Promote** | `sdd-promote` |
+| 13 | `validation.md` is `pass` and there is no `spec-delta.md` | **6 — Promote** | Only valid if the cycle genuinely changed nothing described in `spec/`. Confirm that with the human, then close the cycle without promoting. If it did change something, refine skipped an artifact — go back. |
+| 14 | `spec-delta.md` is `promoted`, or the promote task is checked | **Done** | Report and offer to close the branch. |
 
 If nothing matches, say so rather than picking the closest rule. An unmatched state is a state
 this table does not model, and the human should hear that plainly.

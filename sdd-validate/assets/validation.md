@@ -1,8 +1,15 @@
 ---
 result: pass | fail
-attempt: 1
+attempt: <N>
 validated_at: <yyyy-mm-dd>
 ---
+
+<!--
+attempt NÃO é sempre 1. Antes de escrever este arquivo, leia o attempt do
+validation.md que já existe no ciclo e some 1. Só é 1 se o arquivo não existia.
+Reescrever o arquivo a partir deste template sem ler o valor anterior zera o
+contador — e é ele que vira a coluna "Validações" do cycles/index.md.
+-->
 
 # Validação — <slug do ciclo>
 
