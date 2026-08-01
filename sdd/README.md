@@ -24,8 +24,9 @@ você deixa de ser o único lugar onde o requisito existe.
 | **`sdd`** | — | Orquestrador. Detecta em que fase o ciclo está e chama a skill certa. |
 | **`sdd-start`** | 1 | Abre a pasta do ciclo e escreve o `request.md`. |
 | **`sdd-refine`** | 2 + 3 | Pergunta tudo, escreve os 4 artefatos, **para** no portão e registra a aprovação. |
-| **`sdd-implement`** | 4 | Executa o `tasks.md` de cima pra baixo. |
-| **`sdd-validate`** | 5 | Confere tudo contra o repo real e gera `validation.md`. |
+| **`sdd-implement`** | 4 | Executa o `tasks.md` de cima pra baixo. Depura quando algo quebra. |
+| **`sdd-verify`** | 4.5 | Sobe o servidor, exercita os cenários no navegador, roda os testes. Gera evidência. |
+| **`sdd-validate`** | 5 | Julga a evidência contra os cenários e gera `validation.md`. |
 | **`sdd-promote`** | 6 | Aplica o delta em `spec/`. É a única que escreve lá. |
 
 Cada uma é invocável sozinha. Você não precisa passar pelo orquestrador: "valida o ciclo"
@@ -34,6 +35,11 @@ como você já fala.
 
 A **fase 3 não tem skill** de propósito. Ela não é trabalho que se faz, é trabalho pra onde
 se **para**. Quem levanta o portão e quem registra a aprovação é a `sdd-refine`.
+
+**Verify e Validate são duas** porque quem roda não pode ser quem julga. A fase que sobe o
+servidor tem interesse em que ele funcione; a que decide se o ciclo está pronto não pode ter.
+Separadas, "eu rodei e vi funcionando" vira um artefato que a fase seguinte confere — junto,
+seria só uma opinião com mais passos.
 
 ## Como funciona
 
@@ -44,6 +50,12 @@ se **para**. Quem levanta o portão e quem registra a aprovação é a `sdd-refi
    sdd-start           scenarios.feature          (portão)         sdd-implement
                        spec-delta.md                                    │
                         sdd-refine                                      ▼
+                                                             servidor + navegador
+                                                                  + testes
+                                                              verification.md
+                                                                sdd-verify
+                                                                        │
+                                                                        ▼
                                                                   validation.md
                                                                    sdd-validate
                                                                         │
@@ -70,11 +82,13 @@ Ciclos acumulam; a spec continua única e correta.
 3. **O refino pergunta tudo em UMA mensagem.** Quinze rodadas de "e se a lista estiver vazia?"
    queimam o recurso mais escasso do fluxo: sua atenção.
 4. **`scenarios.feature` descreve o que o usuário vive, nunca como aquilo é construído.**
+5. **Observado, ou não verificado.** Não existe terceiro estado. Código que parece certo não é
+   evidência; servidor que subiu não é evidência de que a tela funciona.
 
 ## Instalação
 
-Copie as seis pastas (`sdd`, `sdd-start`, `sdd-refine`, `sdd-implement`, `sdd-validate`,
-`sdd-promote`) para um dos dois lugares:
+Copie as sete pastas (`sdd`, `sdd-start`, `sdd-refine`, `sdd-implement`, `sdd-verify`,
+`sdd-validate`, `sdd-promote`) para um dos dois lugares:
 
 ```bash
 # pessoal — vale em todos os seus projetos
@@ -168,14 +182,55 @@ vez, não.
 
 Se o plano se revelar errado no meio do caminho, ele para e avisa em vez de improvisar.
 
+Quando algo quebra — teste falhando, exceção, tela que não renderiza — ele diagnostica antes
+de editar: lê o erro inteiro, diz o que esperava e o que aconteceu, testa **uma** hipótese por
+vez. Depois de duas hipóteses furadas, ele para e te conta o que viu em vez de tentar uma
+terceira. E nunca faz teste passar enfraquecendo o teste: apagar assert, afrouxar matcher ou
+pôr `skip` transforma falha real em falso positivo, que é pior que a falha.
+
+## Verificar
+
+```
+verifica o ciclo
+```
+
+Aqui o código deixa de ser texto e vira software rodando. Ele:
+
+1. **Descobre os comandos** lendo o `package.json` / `pyproject.toml` / `Makefile` do projeto.
+   Não achou ou está ambíguo? Pergunta uma vez e grava no `plan.md` — no ciclo seguinte já sabe.
+2. **Roda a suíte** de testes e registra comando e saída reais.
+3. **Sobe o servidor** em background e espera ele responder de verdade, lendo a porta que o
+   servidor **imprimiu** (não a que ele imaginou — dev server troca de porta quando a sua está
+   ocupada, e checar a porta errada parece app quebrado).
+4. **Exercita os cenários no navegador.** Com Playwright/Cypress se o projeto tiver, ou por um
+   MCP de browser. Sem nada disso, ele te entrega um roteiro numerado — URL, o que clicar, o
+   que você deve ver — e registra o que você confirmou.
+5. **Derruba o servidor** ao terminar, inclusive quando dá errado.
+
+Gera o `verification.md`: evidência por cenário, saída dos testes, erros de console.
+
+Três coisas que ele **não** faz de propósito: não conserta nada (fase que conserta o que
+encontra está medindo o próprio conserto), não instala Playwright nem nenhuma dependência
+para conseguir verificar (isso é decisão de arquitetura, merece ciclo próprio), e não marca
+cenário como verificado por dedução — ou foi observado, ou é `NÃO VERIFICADO`.
+
+Também roda fora de ciclo, quando você só quer usar a máquina:
+
+```
+sobe o servidor
+roda os testes
+```
+
 ## Validar
 
 ```
 valida o ciclo
 ```
 
-Gera `validation.md` percorrendo cada cenário e registrando *como* foi verificado — teste
-automatizado, verificação manual, ou `NÃO VERIFICADO`. Rodar a suíte é parte do checklist.
+Gera `validation.md` percorrendo cada cenário e registrando *como* foi verificado. A evidência
+principal é o `verification.md` — esta fase **julga**, não roda. Ela não sobe servidor nem abre
+navegador, e se o `verification.md` não existir, ela te manda rodar o Verify antes em vez de
+aceitar uma leitura de código no lugar.
 
 `result: fail` é resultado normal — é o checkpoint funcionando. As lacunas viram tarefas de
 verdade no `tasks.md`, numa seção `## Correções — validação N` (o `N` é o número da tentativa,
@@ -286,7 +341,11 @@ O que o harness contém:
 │   └── assets/             # plan.md, scenarios.feature, tasks.md,
 │                           # tasks-staged.md, spec-delta.md
 ├── sdd-implement/
-│   └── SKILL.md
+│   └── SKILL.md            # execução, depuração, estágios
+├── sdd-verify/
+│   ├── SKILL.md            # servidor, navegador, testes, evidência
+│   ├── references/runtime.md   # detecção de comandos e porta por stack
+│   └── assets/verification.md
 ├── sdd-validate/
 │   ├── SKILL.md
 │   └── assets/validation.md
@@ -307,6 +366,7 @@ seu-repo/
 │           ├── scenarios.feature   ←                    (sdd-refine)
 │           ├── tasks.md            ←                    (sdd-refine)
 │           ├── spec-delta.md       ← proposta → aplicada (sdd-refine → sdd-promote)
+│           ├── verification.md     ← evidência de runtime (sdd-verify)
 │           └── validation.md       ←                    (sdd-validate)
 └── spec/
     ├── architecture.md

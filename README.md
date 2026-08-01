@@ -1,15 +1,16 @@
-# hardness-sdd
+# harness-sdd
 
 Um harness de **Spec-Driven Development** para o [Claude Code](https://claude.com/claude-code):
-seis skills que transformam uma ideia solta em código passando por um plano revisável, com um
-portão humano antes de qualquer linha ser escrita.
+sete skills que transformam uma ideia solta em código passando por um plano revisável, com um
+portão humano antes de qualquer linha ser escrita — e uma fase que prova que o que foi
+construído realmente roda.
 
 A revisão acontece no artefato mais barato de consertar — um plano de 40 linhas, não 2.000
 linhas de código.
 
 ## Instalação
 
-Copie as seis pastas de skill para um dos dois lugares:
+Copie as sete pastas de skill para um dos dois lugares:
 
 ```bash
 # pessoal — vale em todos os seus projetos
@@ -20,10 +21,10 @@ Copie as seis pastas de skill para um dos dois lugares:
 ```
 
 ```bash
-cp -r sdd sdd-start sdd-refine sdd-implement sdd-validate sdd-promote ~/.claude/skills/
+cp -r sdd sdd-start sdd-refine sdd-implement sdd-verify sdd-validate sdd-promote ~/.claude/skills/
 ```
 
-Não tem build nem dependência: são arquivos markdown. As seis pastas precisam ficar **lado a
+Não tem build nem dependência: são arquivos markdown. As sete pastas precisam ficar **lado a
 lado** no mesmo diretório de skills.
 
 ## Uso rápido
@@ -33,9 +34,12 @@ preciso de um webcomponent que mostre os episódios do paciente em timeline    �
 refina o ciclo                                                                → plano + cenários + tarefas
 aprovado, pode implementar                                                    → portão ✋
 implementa o ciclo                                                            → código
+verifica o ciclo                                                              → sobe servidor, navegador, testes
 valida o ciclo                                                                → validation.md
 promove a spec                                                                → spec/ atualizado
 ```
+
+O `sdd-verify` também roda sozinho, fora de um ciclo: `sobe o servidor`, `roda os testes`.
 
 Perdeu o fio? `onde parei?` — a fase é detectada pelos arquivos, não pela memória da conversa.
 
@@ -46,9 +50,13 @@ Perdeu o fio? `onde parei?` — a fase é detectada pelos arquivos, não pela me
 | `sdd` | — | Orquestrador. Detecta a fase e roteia. |
 | `sdd-start` | 1 | Abre o ciclo, escreve o `request.md`. |
 | `sdd-refine` | 2 + 3 | Pergunta tudo, escreve os 4 artefatos, para no portão. |
-| `sdd-implement` | 4 | Executa o `tasks.md`. |
-| `sdd-validate` | 5 | Confere contra o repo real, gera `validation.md`. |
+| `sdd-implement` | 4 | Executa o `tasks.md`. Cobre depuração quando algo quebra. |
+| `sdd-verify` | 4.5 | Sobe o servidor, exercita os cenários no navegador, roda os testes. Gera evidência. |
+| `sdd-validate` | 5 | Julga a evidência contra os cenários, gera `validation.md`. |
 | `sdd-promote` | 6 | Aplica o delta em `spec/`. Única que escreve lá. |
+
+`sdd-verify` e `sdd-validate` são separadas de propósito: quem **roda** não é quem **julga**.
+Uma fase que produz e avalia a própria evidência não é checkpoint nenhum.
 
 ## Documentação
 
@@ -70,7 +78,8 @@ sdd/                    # orquestrador — invariantes, roteamento, detecção d
 
 sdd-start/              # fase 1
 sdd-refine/             # fases 2 e 3
-sdd-implement/          # fase 4
+sdd-implement/          # fase 4 (+ depuração)
+sdd-verify/             # fase 4.5 — runtime: servidor, navegador, testes
 sdd-validate/           # fase 5
 sdd-promote/            # fase 6
 ```

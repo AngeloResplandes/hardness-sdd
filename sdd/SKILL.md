@@ -1,6 +1,6 @@
 ---
 name: sdd
-description: Orchestrator for the Spec-Driven Development harness — detects which phase a cycle is in from the filesystem and routes to the phase skill that handles it. Use this whenever the user starts a new feature, refactor, or non-trivial bugfix; says "vamos construir/implementar X", "nova feature", "novo ciclo", "quero fazer X"; mentions cycles, request.md, plan.md, tasks.md, scenarios.feature, spec-delta, SDD, spec-driven; or asks "onde parei" / "qual o próximo passo" in a repo containing cycles/ or spec/. Prefer this over jumping straight to code any time the work would touch more than a couple of files. If the user names a phase directly ("refina", "implementa o ciclo", "valida", "promove a spec"), the matching sdd-* phase skill handles it without going through here.
+description: Orchestrator for the Spec-Driven Development harness — detects which phase a cycle is in from the filesystem and routes to the phase skill that handles it. Use this whenever the user starts a new feature, refactor, or non-trivial bugfix; says "vamos construir/implementar X", "nova feature", "novo ciclo", "quero fazer X"; mentions cycles, request.md, plan.md, tasks.md, scenarios.feature, spec-delta, SDD, spec-driven; or asks "onde parei" / "qual o próximo passo" in a repo containing cycles/ or spec/. Prefer this over jumping straight to code any time the work would touch more than a couple of files. If the user names a phase directly ("refina", "implementa o ciclo", "verifica", "roda o servidor", "valida", "promove a spec"), the matching sdd-* phase skill handles it without going through here.
 ---
 
 # SDD — harness
@@ -15,8 +15,14 @@ model, decides where you are, and hands off. It does not do phase work itself.
 | 1 — Start | `sdd-start` | `request.md` |
 | 2 — Refine (+ approval gate) | `sdd-refine` | `plan.md`, `scenarios.feature`, `tasks.md`, `spec-delta.md` |
 | 4 — Implement | `sdd-implement` | code, checked-off tasks |
+| 4.5 — Verify | `sdd-verify` | `verification.md` — runtime evidence |
 | 5 — Validate | `sdd-validate` | `validation.md` |
 | 6 — Promote | `sdd-promote` | updated `spec/` |
+
+Verify and Validate are deliberately separate. Verify **runs** the project — server, browser,
+test suite — and records what it observed. Validate **judges** that evidence against the
+scenarios, the plan, and the scope. A single phase that both produces and grades its own
+evidence is not a checkpoint, and this is the harness's most load-bearing checkpoint.
 
 Phase 3 is the human approval gate. It has no skill because it is not work you do — it is
 work you **stop** for. `sdd-refine` owns both sides of it: raising the gate, and recording
@@ -103,10 +109,13 @@ stops instead of being routed into work.
 | 8 | `validation.md` is `fail`, and its `## Correções — validação N` items are **all checked** | **5 — Validate** | `sdd-validate`. The gaps were worked; re-validate to find out whether they closed. A `fail` whose corrections are done is a stale verdict, not a current one. |
 | 9 | `validation.md` is `fail`, `tasks.md` has **no** `## Correções` section, and every task except promote is checked | **ERRO** | Stop. Validate failed without making its gaps executable — every box is ticked, so implement has nothing to act on and the cycle deadlocks. Re-run `sdd-validate` to write the section. |
 | 10 | `plan.md` is `approved`, tasks other than promote unchecked | **4 — Implement** | `sdd-implement` |
-| 11 | All tasks except promote checked, and no `validation.md` | **5 — Validate** | `sdd-validate` |
-| 12 | `validation.md` is `pass` and `spec-delta.md` is `proposed` | **6 — Promote** | `sdd-promote` |
-| 13 | `validation.md` is `pass` and there is no `spec-delta.md` | **6 — Promote** | Only valid if the cycle genuinely changed nothing described in `spec/`. Confirm that with the human, then close the cycle without promoting. If it did change something, refine skipped an artifact — go back. |
-| 14 | `spec-delta.md` is `promoted`, or the promote task is checked | **Done** | Report and offer to close the branch. |
+| 11 | All tasks except promote checked, and no `verification.md` | **4.5 — Verify** | `sdd-verify`. The code was written; nobody has watched it run yet. |
+| 12 | `verification.md` is `fail` | **4 — Implement** | `sdd-implement`, scoped to what failed to run. Do not route to Validate — there is nothing to judge but a broken run. |
+| 13 | `verification.md` is `pass` but older than the newest source change | **4.5 — Verify** | `sdd-verify` again. The evidence describes code that no longer exists. |
+| 14 | `verification.md` is `pass`, and no `validation.md` | **5 — Validate** | `sdd-validate` |
+| 15 | `validation.md` is `pass` and `spec-delta.md` is `proposed` | **6 — Promote** | `sdd-promote` |
+| 16 | `validation.md` is `pass` and there is no `spec-delta.md` | **6 — Promote** | Only valid if the cycle genuinely changed nothing described in `spec/`. Confirm that with the human, then close the cycle without promoting. If it did change something, refine skipped an artifact — go back. |
+| 17 | `spec-delta.md` is `promoted`, or the promote task is checked | **Done** | Report and offer to close the branch. |
 
 If nothing matches, say so rather than picking the closest rule. An unmatched state is a state
 this table does not model, and the human should hear that plainly.
@@ -132,6 +141,7 @@ human instead.
 | `plan.md` is `approved` but `approved_at: null` | Approval recorded partially | Ask the human for the approval date, or set today's date and say you did. Minor — do not block on it. |
 | `tasks.md` or `scenarios.feature` missing while `plan.md` exists | Refine did not finish | Return to `sdd-refine` to complete the missing artifacts. Do not invent them — they were never reviewed. |
 | `validation.md` is `pass` but tasks are unchecked | Validation ran against the wrong state, or files changed after | Re-run `sdd-validate`. A stale pass is the one failure mode that puts a lie into `spec/`. |
+| `validation.md` is `pass` but there is no `verification.md` | Validate judged without runtime evidence | Re-run `sdd-verify`, then `sdd-validate`. A pass built on a code reading is exactly the claim this harness exists to stop trusting. |
 | Two cycle folders from the same day, user did not say which | Ambiguous | Ask. Guessing writes a plan into someone else's cycle. |
 
 The rule underneath all of these: **when the filesystem contradicts itself, the human

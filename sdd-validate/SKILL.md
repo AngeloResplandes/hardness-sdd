@@ -1,6 +1,6 @@
 ---
 name: sdd-validate
-description: Phase 5 of the SDD harness — checks an implemented cycle against its own tasks, scenarios, plan, and out-of-scope list, runs the test suite, and writes validation.md with result pass or fail. Use when a cycle's tasks are all checked except the final promote task; when the user says "valida o ciclo", "valida", "roda a validação", "está pronto?"; or before any attempt to promote the spec. A fail sends the cycle back to sdd-implement, never forward to sdd-promote.
+description: Phase 5 of the SDD harness — judges an implemented cycle against its own tasks, scenarios, plan, and out-of-scope list, using the runtime evidence sdd-verify produced, and writes validation.md with result pass or fail. Use when a cycle's tasks are all checked except the final promote task and verification.md exists; when the user says "valida o ciclo", "valida", "roda a validação", "está pronto?"; or before any attempt to promote the spec. Judges evidence rather than generating it — it does not start servers or drive browsers. A fail sends the cycle back to sdd-implement, never forward to sdd-promote.
 ---
 
 # Phase 5 — Validate
@@ -48,17 +48,29 @@ Every item in `tasks.md` is checked, except the final promote task. Any unchecke
 automatic fail — list it.
 
 **2. Scenarios**
-Walk `scenarios.feature` scenario by scenario. For each one, record how you know it holds: an
-automated test that covers it (cite file and line), a manual verification you actually
-performed, or `NÃO VERIFICADO`.
+Walk `scenarios.feature` scenario by scenario. For each one, record how you know it holds.
+
+**`verification.md` is the primary evidence.** `sdd-verify` ran the project and observed the
+scenarios; this phase judges what it observed. Read it first and carry its per-scenario
+results across.
+
+Accept, in descending order of strength: an entry in `verification.md` showing the scenario
+was exercised at runtime; an automated test that covers it (cite file and line); a manual
+verification the human confirmed; or `NÃO VERIFICADO`.
+
+If `verification.md` is missing, the cycle has not been run — see *When the state is broken*.
 
 Never infer that a scenario passes because the code "looks right" — that is the exact
 judgment the scenario exists to replace. `NÃO VERIFICADO` is an honest answer and a useful
-one; a fabricated pass is neither.
+one; a fabricated pass is neither. Do **not** re-run the browser or the server yourself to
+close a gap; that is `sdd-verify`'s job, and a phase that generates the evidence it judges is
+not a checkpoint.
 
 **3. Test suite**
-Run it. Record the real command and the real output. If the repo has no test suite, say that
-explicitly rather than skipping the line silently.
+Take the result from `verification.md`. Re-run it only if code changed since — and if it did,
+that is itself a finding worth noting, because it means something moved after verification.
+
+If the repo has no test suite, say that explicitly rather than skipping the line silently.
 
 **4. Plan fidelity**
 Does the implementation match `plan.md`? Divergences are not automatically failures, but each
@@ -92,12 +104,12 @@ validated_at: 2026-07-26
 ## Cenários
 | Cenário | Como foi verificado |
 |---|---|
-| Ver episódios em ordem cronológica | `episodes-list.spec.ts:42` |
+| Ver episódios em ordem cronológica | `verification.md` — exercitado no navegador (playwright) |
 | Lista vazia mostra estado apropriado | `episodes-list.spec.ts:88` |
-| Filtrar por status | verificação manual no ambiente local |
+| Filtrar por status | `verification.md` — verificação manual confirmada pelo humano |
 
 ## Suíte de testes
-`npm test` — 148 passed, 0 failed
+`npm test` — 148 passed, 0 failed (via `verification.md`, 2026-07-28)
 
 ## Divergências do plano
 - Nenhuma. / ou: <lista, com o que foi feito a respeito>
@@ -161,6 +173,9 @@ one, otherwise "corrigido" is an unverifiable claim.
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
+| `verification.md` missing | `sdd-verify` never ran | The cycle was never observed running. Run `sdd-verify` first. Do not substitute a code reading for it — "eu li o código e parece certo" is the exact claim this phase exists to reject. |
+| `verification.md` is older than the last code change | Code moved after verification | The evidence describes a version that no longer exists. Re-run `sdd-verify`. Note it, because code changing after verification usually means someone fixed something without saying so. |
+| `verification.md` says `fail` | The project did not run correctly | `result: fail`. Carry its failures into the gaps. Do not re-run the browser yourself hoping for a better outcome. |
 | The test suite will not run (broken deps, missing config) | Environment problem | Record the real command and error under *Suíte de testes*. This is `result: fail` — an unrunnable suite means the scenarios are unverified, and unverified is not a pass. |
 | The repo has no test suite at all | Project has none | Not automatically a fail. Say so explicitly, and verify each scenario manually or mark it `NÃO VERIFICADO`. A cycle can pass with manual verification; it cannot pass with silence. |
 | `scenarios.feature` missing or empty | Refine did not finish | **PARE.** There is no definition of done to validate against. Return to `sdd-refine`. |
