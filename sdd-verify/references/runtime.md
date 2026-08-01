@@ -46,6 +46,17 @@ Flask 5000, FastAPI/uvicorn 8000).
 Every dev server prints the URL it actually bound to, and that line is the ground truth —
 including when it silently picked a different port because yours was taken.
 
+That line is almost always colorized, with the escape codes landing *inside* the number
+(`localhost:\e[1m5173\e[22m`). Strip them before parsing:
+
+```bash
+sed -e 's/\x1b\[[0-9;]*m//g' server.log | grep -oE 'https?://localhost:[0-9]+' | head -1
+```
+
+Observed on Vite 5: a second instance prints `Port 5173 is in use, trying another one...` and
+binds 5174 — with both servers answering HTTP 200. Inferring the port there does not error, it
+verifies the wrong application.
+
 ## Browser automation
 
 Check what the project already has before reaching for anything new:

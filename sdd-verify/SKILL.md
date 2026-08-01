@@ -56,24 +56,70 @@ them one at a time.
 
 ## Step 3 — Start the server
 
-Start it in the **background**, so it stays up while you check it, and capture its output.
+A dev server never exits on its own, so it cannot be run like a normal command — it has to be
+detached, watched until ready, and killed by something that can find it again afterwards.
 
-Then wait for it to actually be ready. Do not sleep a fixed number of seconds and hope:
+### Start it, redirecting output to a file
 
-- Watch the output for the line where it reports the URL it bound to.
-- Or poll the URL until it answers.
+```bash
+npm run dev > /tmp/sdd-server.log 2>&1 &
+```
 
-**Take the port from the server's own output, not from your inference.** Dev servers move to
-another port when the expected one is taken, and a browser check against the wrong port fails
-in a way that looks like a broken app.
+**Redirect to a file rather than relying on captured output.** A backgrounded server produces
+no output where you can see it — the log file is the only way to read the port line, and it is
+also the evidence you attach when the server fails to start.
 
-If it does not come up within a reasonable window (~60s for most stacks), stop waiting and
-report the output. A server that never started is a `result: fail` with the log attached, not
-a reason to retry three more times.
+### Wait for it to be ready — never a fixed sleep
 
-**Always shut it down when the phase ends**, including when the phase ends in a failure. A
-background dev server left running holds the port and makes the next run fail for a reason
-that has nothing to do with the code.
+Poll until the URL line appears, then confirm the URL answers:
+
+```bash
+for i in $(seq 1 60); do
+  url=$(sed -e 's/\x1b\[[0-9;]*m//g' /tmp/sdd-server.log | grep -oE 'https?://localhost:[0-9]+' | head -1)
+  [ -n "$url" ] && break
+  sleep 0.5
+done
+curl -s -o /dev/null -w '%{http_code}' "$url/"
+```
+
+**Strip ANSI escape codes before parsing.** Vite, Next, and most modern dev servers colorize
+their output, and the codes land *inside* the number — the raw line reads
+`localhost:\e[1m5173\e[22m`. A grep against the raw log either misses the port or captures
+garbage, and the browser check then runs against nothing. The `sed` above is not optional.
+
+**Take the port from that line, not from your inference.** Dev servers move to another port
+when the expected one is taken — Vite prints `Port 5173 is in use, trying another one...` and
+binds 5174. An agent that assumed 5173 would silently check a *different, older* server, which
+is worse than failing: it verifies stale code and reports a pass.
+
+If nothing appears within ~60s, stop and report the log. A server that never started is a
+`result: fail` with the log attached, not a reason to retry.
+
+### Shut it down — and verify the port is actually free
+
+**On Windows this is where naive shutdown fails silently.** `npm run dev` spawns the real
+server as a *child* of npm, and under Git Bash the recorded `$!` is a Bash PID, not the Windows
+PID holding the port. `kill $!` reports success and leaves the server running.
+
+Find the process by the port it holds, and kill the tree:
+
+```bash
+# Windows / Git Bash
+pid=$(netstat -ano | grep ":5173 " | grep LISTENING | awk '{print $NF}' | head -1)
+taskkill //PID $pid //T //F      # //T kills the child that actually holds the port
+
+# macOS / Linux
+kill $(lsof -ti:5173)
+```
+
+Then **confirm the port is free** rather than trusting the kill reported success:
+
+```bash
+netstat -ano | grep ":5173 " | grep LISTENING || echo "porta liberada"
+```
+
+Do this even when the phase ends in failure. A leftover dev server holds the port, and the next
+run either fails to start or — far worse — silently attaches to the stale one.
 
 ## Step 4 — Exercise the scenarios in a browser
 
@@ -134,6 +180,10 @@ overstates itself is worse than no evidence, because the next phase trusts it.
 |---|---|---|
 | No command found for the dev server | Undocumented project | Ask once, with what you found as the proposed default. Record the answer in `plan.md` under *Runtime*. |
 | Server exits immediately | Port in use, missing env var, broken build | Report the **actual output**. Port conflicts and missing `.env` are the usual two, and both are the human's call — do not free the port or invent env values. |
+| Log file stays empty and nothing binds | The start command failed before printing anything | Read the log anyway — the failure is usually in the first lines (missing script, module not found). An empty log after 60s with no listening port is `result: fail`. |
+| The port line never parses, but the server is up | ANSI codes not stripped | Re-parse with the `sed` filter in step 3. Do not fall back to a guessed port — that is how a check runs against the wrong server. |
+| Kill reported success but the port is still held | Windows: killed the Bash PID, not the Windows child | Find the PID via `netstat -ano` on the port and `taskkill //PID <pid> //T //F`. Always re-check the port after killing; a shutdown you did not confirm did not happen. |
+| A server from a previous run is still listening | Earlier phase did not clean up | **PARE** before starting another. Two servers on adjacent ports means your check may hit the stale one. Kill the old one first, and say you found it. |
 | Server starts but the page is blank | Build error, wrong route, JS exception | Capture the console output and the network tab if you have them. Blank page plus a clean console is a different bug from blank page plus a stack trace. |
 | Tests fail | Could be the implementation, could be the environment | Not your call to diagnose here. Record and hand back. If the same suite passed in `sdd-implement`, say so — that difference is the clue. |
 | Browser automation exists but is not configured (no baseURL, no browsers installed) | Setup never finished | Report it. `npx playwright install` is a machine-level action — offer it, do not run it. |
