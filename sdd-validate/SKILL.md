@@ -24,8 +24,10 @@ validate from memory of having written it.
 ## Which cycle
 
 If the user named one, use that. Otherwise take the newest folder under `cycles/` — newest
-**by folder name** (`Q{q}{yyyy}/{MMDD}` sorts chronologically), not by mtime. Two candidates
-from the same day and no instruction → ask. State which one you resolved to.
+**by the date the name encodes**, not by mtime. Reorder to `yyyyMMdd` before comparing —
+`Q{q}{yyyy}` puts the quarter first, so a plain string sort ranks `Q42025` above `Q32026` and
+picks a cycle from last year. Two candidates from the same day and no instruction → ask. State
+which one you resolved to.
 
 ## Step 0 — Read the previous validation first
 
@@ -143,6 +145,12 @@ Close the loop yourself:
    Never reuse a heading that already exists. `sdd-implement` scopes itself to the
    highest-numbered section, so two sections sharing a number leave it unable to tell finished
    work from the work you just assigned it.
+
+   **Keep the promote task last, after the new section.** It has no heading of its own, so it
+   ends up textually inside whatever `## Correções` block precedes it — and an implement pass
+   scanning that section to end-of-file will pick it up as a gap to work. It stays last because
+   `sdd-promote` identifies it positionally; the protection is that implement excludes it by
+   text. Do not move it, do not add a heading above it, and never leave it checked.
 
 2. If a gap means a previously checked task was not actually complete, **uncheck it**
    (`- [x]` → `- [ ]`) and say so in your report. A checked box that is not true is worse

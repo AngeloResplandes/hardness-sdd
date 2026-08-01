@@ -28,8 +28,9 @@ the phase that judges should not.
 ## Which cycle
 
 If the user named one, use that. Otherwise take the newest folder under `cycles/` — newest
-**by folder name** (`Q{q}{yyyy}/{MMDD}` sorts chronologically), not by mtime. Two candidates
-from the same day and no instruction → ask.
+**by the date the name encodes**, not by mtime. Reorder to `yyyyMMdd` before comparing —
+`Q{q}{yyyy}` puts the quarter first, so a plain string sort ranks `Q42025` above `Q32026` and
+picks a cycle from last year. Two candidates from the same day and no instruction → ask.
 
 This skill also runs **without a cycle** — "sobe o servidor", "roda os testes" on their own.
 In that mode, do steps 1–2 (and 4 if asked), report, and skip `verification.md` entirely.
@@ -46,6 +47,25 @@ sourced from a guess should be visibly a guess.
 
 Run it first. It is the cheapest signal and it fails fastest.
 
+**Unit and E2E are two different suites — do not conflate their results.** In projects that
+have both, the unit runner's default glob often picks up the E2E specs it cannot execute.
+Vitest scanning a Playwright `e2e/` directory reports:
+
+```
+FAIL  e2e/episodes.spec.js
+Error: Playwright Test did not expect test() to be called here.
+Test Files  1 failed | 1 passed (2)
+      Tests  3 passed (3)
+```
+
+Every actual test passed. The failure is a runner collision, not a defect — and reporting that
+cycle as `fail` sends someone hunting a bug that does not exist. Read the counts: "Tests"
+is the real signal, "Test Files" includes files that never ran.
+
+When you see it, say so plainly in *Suíte de testes* and record both numbers. It is worth
+flagging under *Observações* as a project config issue (the fix is an `exclude` in the vitest
+config), but it is **not** yours to fix here and not grounds for failing the cycle.
+
 Record the **real command and the real output** — counts, and the actual failure text for
 anything that failed. Never summarize a failure into "alguns testes falharam"; the output is
 what makes it actionable.
@@ -55,6 +75,30 @@ A failing suite does not stop the phase. Keep going and check the browser too �
 them one at a time.
 
 ## Step 3 — Start the server
+
+### First: check whether the E2E runner already starts one
+
+**Do not start a server the test runner is going to start itself.** Playwright's
+`webServer` block and Cypress's `start-server-and-test` launch and stop the app as part of the
+run. Starting your own first produces one of two outcomes, and both are bad:
+
+- `reuseExistingServer: false` (common in CI configs) → the run **fails outright** with
+  `http://localhost:5173 is already used`, zero scenarios executed, for a reason that has
+  nothing to do with the code.
+- `reuseExistingServer: true` → it silently attaches to *your* server instead of the one the
+  config describes, so you verified something the config never sanctioned.
+
+```bash
+grep -l "webServer" playwright.config.* 2>/dev/null
+grep -l "start-server-and-test" package.json 2>/dev/null
+```
+
+If either matches, **skip to step 4 and let the runner own the server's lifecycle.** Start a
+server yourself only when there is no automation, or when the automation does not manage one.
+Say in your report which of the two happened — "servidor gerenciado pelo Playwright" and
+"servidor iniciado por mim" are different facts about how the evidence was produced.
+
+### Otherwise, start it yourself
 
 A dev server never exits on its own, so it cannot be run like a normal command — it has to be
 detached, watched until ready, and killed by something that can find it again afterwards.
@@ -187,6 +231,8 @@ overstates itself is worse than no evidence, because the next phase trusts it.
 | Server starts but the page is blank | Build error, wrong route, JS exception | Capture the console output and the network tab if you have them. Blank page plus a clean console is a different bug from blank page plus a stack trace. |
 | Tests fail | Could be the implementation, could be the environment | Not your call to diagnose here. Record and hand back. If the same suite passed in `sdd-implement`, say so — that difference is the clue. |
 | Browser automation exists but is not configured (no baseURL, no browsers installed) | Setup never finished | Report it. `npx playwright install` is a machine-level action — offer it, do not run it. |
+| `Executable doesn't exist at ...chromium-<N>` while a different `chromium-<M>` is installed | Playwright upgraded; its browser build no longer matches | Not a code failure. The binaries are versioned to the Playwright release, so having "Chromium installed" is not enough. Offer `npx playwright install chromium` — a ~115MB machine-level download, so it is the human's call, not yours. |
+| `is already used, make sure that nothing is running on the port` | You started a server the runner also manages | Kill yours and let the runner own it. See step 3 — this is why the `webServer` check comes first. |
 | A scenario cannot be exercised at all (needs prod data, a third-party account, a device) | Not verifiable in this environment | `NÃO VERIFICADO` with the reason. This is a legitimate outcome; hiding it is not. |
 | Verification passes but you noticed something ugly outside the scenarios | Out of scope | Note it under *Observações*. Do not fix it, do not fail the cycle for it. |
 

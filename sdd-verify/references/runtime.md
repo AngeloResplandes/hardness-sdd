@@ -21,8 +21,8 @@ like a broken app rather than a broken guess.
 | Signal file | Read | Typical dev server | Typical tests |
 |---|---|---|---|
 | `package.json` | `scripts` | `dev`, `start`, `serve` | `test`, `test:unit`, `vitest`, `jest` |
-| `pyproject.toml` | `[tool.poetry.scripts]`, `[project.scripts]` | `uvicorn`, `flask run`, `manage.py runserver` | `pytest` |
-| `manage.py` | — | `python manage.py runserver` | `python manage.py test` / `pytest` |
+| `pyproject.toml` | `[tool.poetry.scripts]`, `[project.scripts]` | `uvicorn`, `flask run`, `manage.py runserver` | `python -m pytest` |
+| `manage.py` | — | `python manage.py runserver` | `python manage.py test` / `python -m pytest` |
 | `Makefile` | targets | `make dev`, `make run`, `make serve` | `make test` |
 | `Cargo.toml` | — | `cargo run` | `cargo test` |
 | `go.mod` | — | `go run ./...` | `go test ./...` |
@@ -32,6 +32,13 @@ like a broken app rather than a broken guess.
 
 Prefer the script the project defines over the underlying tool. `npm run dev` is what the
 team runs; `vite --port 3000` is an implementation detail that drifts.
+
+**Python: use `python -m pytest`, not bare `pytest`.** The `-m` form puts the current
+directory on `sys.path`; the bare console script does not. On a normal `app/` + `tests/`
+layout without an editable install, bare `pytest` dies at collection with `ModuleNotFoundError`
+on the project's own package — an error that reads like broken code but is purely an
+invocation artifact. Observed: same repo, same tests, `2 passed` under `-m` and
+`1 error during collection` without it.
 
 ## The port and base URL
 
@@ -67,6 +74,15 @@ Check what the project already has before reaching for anything new:
 | `cypress.config.*` | Cypress |
 | A browser MCP server in the session | Drive the browser through it |
 | None of the above | Manual verification — see `SKILL.md` |
+
+Two things to check before running it, both of which fail the phase for reasons unrelated to
+the code:
+
+- **Does the config manage its own server?** `webServer` in `playwright.config.*`, or
+  `start-server-and-test` in `package.json`. If so, do not start one yourself — see step 3.
+- **Are the browser binaries the version this Playwright wants?** They are pinned per release
+  (`chromium-1234`, not "chromium"), so an upgraded Playwright fails against binaries that are
+  merely present. The error names the exact expected path.
 
 **Do not install a browser automation stack to close a cycle.** Adding Playwright to a project
 that never had it is a dependency decision, an architectural one, and it belongs in a cycle of

@@ -17,9 +17,10 @@ description: Phase 4 of the SDD harness — executes an approved cycle by workin
 ## Which cycle
 
 1. If the user named one, use that.
-2. Otherwise take the newest folder under `cycles/` — newest **by folder name** (the
-   `Q{q}{yyyy}/{MMDD}` prefix sorts chronologically), not by mtime, which changes whenever any
-   file is touched.
+2. Otherwise take the newest folder under `cycles/` — newest **by the date the name encodes**,
+   not by mtime (which changes whenever any file is touched). Reorder to `yyyyMMdd` before
+   comparing: `Q{q}{yyyy}` puts the quarter first, so a plain string sort ranks `Q42025` above
+   `Q32026` and picks a cycle from last year.
 3. Two candidates from the same day and the user did not say which → **ask**.
 
 State which cycle you resolved to before writing any code.
@@ -54,6 +55,11 @@ Three different things can bring you here, and they have different scopes:
   are previous rounds — already done and marked. If the section for your attempt number is
   missing, **stop**: validation failed without making its gaps executable, and guessing which
   unchecked items it meant is how a cycle silently loses a fix.
+
+  **The promote task is never in your scope, even though it sits inside that section.** It is
+  the last line of the file and no heading follows it, so a scan that runs to end-of-file
+  sweeps it up along with the real gaps. Exclude it by its text, not by its position — you must
+  not check it off under any circumstance, and `sdd-validate` has to run before it is touched.
 
   Also work any task **outside** that section that validation unchecked — a box it un-ticked is
   a box that was not actually true.

@@ -23,9 +23,10 @@ implementation has removed the only review point that matters.
 ## Step 0 — Resolve which cycle you are in
 
 1. If the user named a cycle, use that.
-2. Otherwise take the newest folder under `cycles/` — newest **by folder name** (the
-   `Q{q}{yyyy}/{MMDD}` prefix sorts chronologically), not by filesystem mtime, which changes
-   whenever any file is touched.
+2. Otherwise take the newest folder under `cycles/` — newest **by the date the name encodes**,
+   not by filesystem mtime (which changes whenever any file is touched). Reorder to `yyyyMMdd`
+   before comparing: `Q{q}{yyyy}` puts the quarter first, so a plain string sort ranks
+   `Q42025` above `Q32026` and picks a cycle from last year.
 3. If two candidates share the same day and the user did not say which, **ask**. Guessing here
    means writing a plan into someone else's cycle.
 

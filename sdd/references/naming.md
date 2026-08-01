@@ -55,8 +55,36 @@ humans reading the repo two years from now.
 When a phase skill needs to know which cycle it is operating on:
 
 1. If the user named one, use that.
-2. Otherwise take the newest folder under `cycles/` — newest by folder name (the `Q{q}{yyyy}/{MMDD}`
-   prefix sorts chronologically), not by filesystem mtime, which changes whenever a file is
-   touched.
+2. Otherwise take the newest folder under `cycles/`, **sorted by the date it encodes**, not by
+   filesystem mtime (which changes whenever any file is touched) and not by a plain lexical
+   sort of the path (see the trap below).
 3. If `cycles/` has more than one candidate from the same day and the user did not say
    which, ask. Guessing wrong here means writing a plan into someone else's cycle.
+
+### The sort trap — read this before comparing folder names
+
+`Q{q}{yyyy}` puts the **quarter before the year**, so a plain lexical sort is wrong across a
+year boundary:
+
+```
+Q12026/0103-mid     ← sorts first
+Q32026/0801-new     ← actually the newest
+Q42025/1215-old     ← sorts last, but is the OLDEST (Dec 2025)
+```
+
+`Q4` beats `Q3` lexically no matter what year follows it. Sorting these paths as strings picks
+a cycle from the previous year and writes the current plan into it.
+
+**Reorder to `yyyyMMdd` before comparing.** Derive the year from the quarter directory and the
+month/day from the folder name:
+
+```bash
+# emit "20260801<tab>path" per cycle, sort numerically, take the last
+find cycles -mindepth 2 -maxdepth 2 -type d |
+  sed -E 's|.*/Q[0-9]([0-9]{4})/([0-9]{4})-.*|\1\2\t&|' |
+  sort -n | tail -1 | cut -f2
+```
+
+Any equivalent works — the requirement is that **year compares before month before day**.
+Verify against a known-newest folder when a repo spans more than one year; this is silent when
+wrong, and the failure mode is writing into the wrong cycle.

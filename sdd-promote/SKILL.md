@@ -24,9 +24,10 @@ you use it:
 ## Which cycle
 
 If the user named one, use that. Otherwise take the newest folder under `cycles/` — newest
-**by folder name** (`Q{q}{yyyy}/{MMDD}` sorts chronologically), not by mtime. Two candidates
-from the same day and no instruction → ask. State which one you resolved to before writing
-anything into `spec/`.
+**by the date the name encodes**, not by mtime. Reorder to `yyyyMMdd` before comparing —
+`Q{q}{yyyy}` puts the quarter first, so a plain string sort ranks `Q42025` above `Q32026` and
+picks a cycle from last year. Two candidates from the same day and no instruction → ask. State
+which one you resolved to before writing anything into `spec/`.
 
 ## Preconditions
 
