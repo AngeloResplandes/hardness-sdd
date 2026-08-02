@@ -1,7 +1,7 @@
 # harness-sdd
 
 Um harness de **Spec-Driven Development** para o [Claude Code](https://claude.com/claude-code):
-sete skills que transformam uma ideia solta em código passando por um plano revisável, com um
+oito skills que transformam uma ideia solta em código passando por um plano revisável, com um
 portão humano antes de qualquer linha ser escrita — e uma fase que prova que o que foi
 construído realmente roda.
 
@@ -10,7 +10,7 @@ linhas de código.
 
 ## Instalação
 
-Copie as sete pastas de skill para um dos dois lugares:
+Copie as oito pastas de skill para um dos dois lugares:
 
 ```bash
 # pessoal — vale em todos os seus projetos
@@ -21,16 +21,17 @@ Copie as sete pastas de skill para um dos dois lugares:
 ```
 
 ```bash
-cp -r sdd sdd-start sdd-refine sdd-implement sdd-verify sdd-validate sdd-promote ~/.claude/skills/
+cp -r sdd sdd-start sdd-capability sdd-refine sdd-implement sdd-verify sdd-validate sdd-promote ~/.claude/skills/
 ```
 
-Não tem build nem dependência: são arquivos markdown. As sete pastas precisam ficar **lado a
+Não tem build nem dependência: são arquivos markdown. As oito pastas precisam ficar **lado a
 lado** no mesmo diretório de skills.
 
 ## Uso rápido
 
 ```
 preciso de um webcomponent que mostre os episódios do paciente em timeline    → abre o ciclo
+mapeia a capacidade                                                           → tamanho + restrições (só Large)
 refina o ciclo                                                                → plano + cenários + tarefas
 aprovado, pode implementar                                                    → portão ✋
 implementa o ciclo                                                            → código
@@ -38,6 +39,9 @@ verifica o ciclo                                                              �
 valida o ciclo                                                                → validation.md
 promove a spec                                                                → spec/ atualizado
 ```
+
+Em ciclo Small ou Medium a fase Capability só classifica o tamanho e sai do caminho — ela
+existe para trabalho que cruza serviços, não para engordar ciclo pequeno.
 
 O `sdd-verify` também roda sozinho, fora de um ciclo: `sobe o servidor`, `roda os testes`.
 
@@ -49,6 +53,7 @@ Perdeu o fio? `onde parei?` — a fase é detectada pelos arquivos, não pela me
 |---|---|---|
 | `sdd` | — | Orquestrador. Detecta a fase e roteia. |
 | `sdd-start` | 1 | Abre o ciclo, escreve o `request.md`. |
+| `sdd-capability` | 1.5 | Classifica o tamanho. Em ciclo Large, resolve restrições, invariantes e fronteiras antes do plano. |
 | `sdd-refine` | 2 + 3 | Pergunta tudo, escreve os 4 artefatos, para no portão. |
 | `sdd-implement` | 4 | Executa o `tasks.md`. Cobre depuração quando algo quebra. |
 | `sdd-verify` | 4.5 | Sobe o servidor, exercita os cenários no navegador, roda os testes. Gera evidência. |
@@ -57,6 +62,10 @@ Perdeu o fio? `onde parei?` — a fase é detectada pelos arquivos, não pela me
 
 `sdd-verify` e `sdd-validate` são separadas de propósito: quem **roda** não é quem **julga**.
 Uma fase que produz e avalia a própria evidência não é checkpoint nenhum.
+
+`sdd-capability` é **condicional** de propósito. Ela roda inteira só em ciclo Large — trabalho
+que cruza módulos, publica contrato ou migra dado. É onde as restrições que só existem na
+cabeça de um engenheiro sênior viram texto, antes do plano em vez de no meio do PR.
 
 ## Documentação
 
@@ -77,6 +86,10 @@ sdd/                    # orquestrador — invariantes, roteamento, detecção d
     └── reporting.md    # formato do relatório de fechamento
 
 sdd-start/              # fase 1
+sdd-capability/         # fase 1.5 — tamanho + restrições (só Large)
+├── SKILL.md
+├── assets/capability.md
+└── references/constraints.md   # restrição bem escrita vs. inútil
 sdd-refine/             # fases 2 e 3
 sdd-implement/          # fase 4 (+ depuração)
 sdd-verify/             # fase 4.5 — runtime: servidor, navegador, testes

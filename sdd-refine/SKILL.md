@@ -37,34 +37,61 @@ State which cycle you resolved to before doing anything else.
 Read, in this order:
 
 1. The cycle's `request.md`.
-2. Every canonical doc it references under `spec/` — and their neighbors. If the request
+2. The cycle's `capability.md`, if it exists. On a Large cycle this is the densest input you
+   have: it already carries the size, the invariants, the trust boundaries, the out-of-scope
+   boundary, and a list of open questions with the assumptions attached. **Everything resolved
+   there is resolved** — do not re-litigate it and do not ask about it again in step 2. Its
+   *Questões em aberto* are yours to fold into your single question message; its *Fora de
+   escopo desta capacidade* is what `plan.md`'s *Fora de escopo* derives from.
+3. Every canonical doc it references under `spec/` — and their neighbors. If the request
    points at `spec/features/episodes-list/`, also read `spec/architecture.md` and any
    sibling feature that already solves a similar problem.
-3. The actual code for the module being touched, enough to know what already exists.
+4. The actual code for the module being touched, enough to know what already exists.
 
 The point is to arrive at Step 2 with questions the human could not have answered by reading
 the repo themselves. A question whose answer is sitting in `spec/architecture.md` wastes
-their time and erodes their trust in the process.
+their time and erodes their trust in the process. A question already answered in
+`capability.md` is worse — the human answered it one phase ago, and asking again tells them
+the artifact they reviewed was not read.
 
 ## Step 2 — Ask everything in one message
 
 Read `references/questions.md` now. It holds the question areas, how to phrase them so they
 are cheap to answer, and what to do when the human answers only part of the list.
 
+On a cycle that has a `capability.md`, **subtract before you ask.** Whole areas of that
+checklist — data ownership, trust boundaries, rollout, compliance — are usually already
+resolved there. What remains is typically the UX and behavior detail that a constraint pass
+does not cover, plus whatever `capability.md` listed under *Questões em aberto*. Carry those
+open questions forward verbatim rather than rephrasing them; the human already saw that
+wording and rephrasing makes it look like a new question.
+
 Then send **one** message — grouped under headings, numbered — and stop and wait.
 
 This is invariant 3, and it is the one that protects the human's attention. Fifteen rounds of
 "e se a lista estiver vazia?" costs more than the ambiguity it resolves.
 
-## Step 3 — Classify the cycle size
+## Step 3 — Take the cycle size
 
 Size decides the shape of `tasks.md`. Small and Medium get a flat checklist; Large gets
 numbered `## Stage N` sections, each independently reviewable and mergeable.
 
-**Large** means: multiple modules, a new public or integration contract, a migration, or work
+**`sdd-capability` owns this classification.** Read `size` from `capability.md` and carry it
+into the plan's frontmatter unchanged. Do not re-derive it — two phases classifying
+independently is two chances to disagree, and the disagreement surfaces as a Large cycle with
+a flat checklist, which is exactly the 3,000-line review the size exists to prevent.
+
+If you believe the recorded size is wrong, **say so and stop** rather than silently overriding
+it. Re-sizing changes whether phase 1.5 should have run at all, and that is the human's call.
+
+**If `capability.md` does not exist** — an older cycle, or Capability was skipped — classify it
+here as a fallback, and say that you are doing so:
+
+**Large** means multiple modules, a new public or integration contract, a migration, or work
 you would not want to land in a single pull request. When torn between two sizes, pick the
 larger — an over-structured small cycle costs a few extra headings; an under-structured large
-one costs a 3,000-line review nobody does properly.
+one costs a 3,000-line review nobody does properly. If it comes out Large, mention that
+`sdd-capability` would normally have run first; the human may want it before approving.
 
 If `cycles/index.md` exists, read it before deciding. It is the only record of how past
 cycles actually went, and the `Validações` column is the useful one: if cycles you sized the
@@ -72,7 +99,7 @@ way you are about to size this one have been needing two or three validation rou
 evidence your plans at that size are under-specified. Size up, or break the work smaller.
 Writing that column and never reading it makes it bookkeeping instead of feedback.
 
-Record the size in the plan's frontmatter.
+Record the size in the plan's frontmatter either way.
 
 ## Step 4 — Draft the four artifacts
 
@@ -99,7 +126,14 @@ Open questions.
 and it is where you discover the spec is already wrong.
 
 "Fora de escopo" is what holds the line during implementation and what `sdd-validate` checks
-against. Vague scope boundaries produce scope creep that nobody can call out afterward.
+against. Vague scope boundaries produce scope creep that nobody can call out afterward. When
+`capability.md` exists, this section **derives from** its *Fora de escopo desta capacidade* —
+narrower is fine, wider is not. A plan that claims scope the capability excluded is a plan
+that outgrew the constraints it was built on; say so instead of quietly widening it.
+
+If `capability.md` recorded invariants or trust boundaries, the *Mudanças propostas* have to
+respect them. Where a proposed change would violate one, that is not a detail to note in
+passing — it is a finding, and it belongs in *Riscos e mitigações* or back in the human's lap.
 
 ### scenarios.feature
 
@@ -224,6 +258,8 @@ Then hand off to `sdd-implement`.
 | Symptom | Likely cause | What to do |
 |---|---|---|
 | No `request.md` in the cycle folder | Start never ran | Return to `sdd-start`. Do not write the request yourself and refine it in the same breath — you would be reviewing your own understanding instead of the human's. |
+| `capability.md` has `handoff: precisa de decisão de produto` or `precisa de revisão de arquitetura` | Capability raised a blocking decision | **PARE.** Name the decision and wait for the human. Refining past a blocking handoff resolves it by assumption — which is exactly what phase 1.5 raised it to prevent. |
+| `capability.md` missing and the cycle looks Large | Capability was skipped | Not fatal. Say so, size it yourself (step 3), and offer to run `sdd-capability` first. A Large plan written without a constraint pass is the case phase 1.5 exists for. |
 | `request.md` already contains a plan, tasks, or acceptance criteria | Solution written into the problem | Say so. Refine against the *problem* in it and ask the human to confirm the parts you are treating as pre-decided. A request that already answers everything makes this phase theater. |
 | `plan.md` already exists with `status: approved` | Cycle already passed the gate | **PARE.** Re-refining approved work silently invalidates the approval. Ask whether they want to amend the plan (which re-opens the gate: set `status: draft`) or move on to `sdd-implement`. |
 | `plan.md` exists as `draft` | Refine ran before | Not an error. Update the existing artifacts rather than overwriting from scratch — the human may have edited them. |

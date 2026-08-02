@@ -3,8 +3,8 @@
 The canonical version of these rules. The phase skills carry their own condensed copy, because
 a skill that reaches across into a sibling skill's folder breaks the moment someone installs
 them somewhere other than side by side. **If you change a rule here, update the copies** in
-`sdd-start` (naming + date) and in `sdd-refine`, `sdd-implement`, `sdd-validate`, `sdd-promote`
-(cycle resolution).
+`sdd-start` (naming + date) and in `sdd-capability`, `sdd-refine`, `sdd-implement`,
+`sdd-validate`, `sdd-promote` (cycle resolution).
 
 The folder name is the cycle's permanent identity — it ends up in git history, in
 `spec-delta.md`, and in the plan's frontmatter, so getting it right once is cheaper than

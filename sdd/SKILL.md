@@ -13,6 +13,7 @@ model, decides where you are, and hands off. It does not do phase work itself.
 | Phase | Skill | Produces |
 |---|---|---|
 | 1 — Start | `sdd-start` | `request.md` |
+| 1.5 — Capability | `sdd-capability` | `capability.md` — size, constraints, invariants (Large only) |
 | 2 — Refine (+ approval gate) | `sdd-refine` | `plan.md`, `scenarios.feature`, `tasks.md`, `spec-delta.md` |
 | 4 — Implement | `sdd-implement` | code, checked-off tasks |
 | 4.5 — Verify | `sdd-verify` | `verification.md` — runtime evidence |
@@ -27,6 +28,19 @@ evidence is not a checkpoint, and this is the harness's most load-bearing checkp
 Phase 3 is the human approval gate. It has no skill because it is not work you do — it is
 work you **stop** for. `sdd-refine` owns both sides of it: raising the gate, and recording
 the approval when it comes.
+
+Phase 1.5 is **conditional**. It runs in full only for Large cycles — work that crosses
+modules, publishes a contract, or migrates data. It exists because Refine's one-message
+question round has to discover constraints *and* produce four artifacts in a single pass, and
+at Large size that is too much for one step: the constraints that live only in senior-engineer
+memory get discovered during implementation instead, when they are expensive. For Small and
+Medium cycles `sdd-capability` classifies the size, records it, and steps aside — ceremony
+applied to trivia is how good processes get abandoned.
+
+It also owns **cycle size classification**, which used to happen in Refine. The routing into
+1.5 depends on the size, so the size has to be decided before Refine runs. Refine now reads
+`size` from `capability.md` rather than re-deriving it — two phases classifying independently
+is two chances to disagree.
 
 ## Why this exists
 
@@ -101,21 +115,27 @@ stops instead of being routed into work.
 |---|---|---|---|
 | 1 | `cycles/` missing, or exists with no cycle folder | **1 — Start** | `sdd-start` |
 | 2 | Cycle folder exists but has no `request.md` | **1 — Start** | Orphan folder. Confirm with the human before reusing or replacing it. |
-| 3 | `request.md`, no `plan.md` | **2 — Refine** | `sdd-refine` |
-| 4 | `plan.md` has no `status:` in frontmatter | **ERRO** | Stop. See *When the state is broken*. |
-| 5 | `plan.md` is `draft` **and** any task is checked | **ERRO** | Stop. Implementation happened without a gate. See below. |
-| 6 | `plan.md` is `draft` | **3 — Gate** | Stop. Ask the human to review and approve. Do not code. |
-| 7 | `validation.md` is `fail`, and its `## Correções — validação N` section has **unchecked** items | **4 — Implement** | `sdd-implement`, scoped to that section — not the whole checklist. |
-| 8 | `validation.md` is `fail`, and its `## Correções — validação N` items are **all checked** | **5 — Validate** | `sdd-validate`. The gaps were worked; re-validate to find out whether they closed. A `fail` whose corrections are done is a stale verdict, not a current one. |
-| 9 | `validation.md` is `fail`, `tasks.md` has **no** `## Correções` section, and every task except promote is checked | **ERRO** | Stop. Validate failed without making its gaps executable — every box is ticked, so implement has nothing to act on and the cycle deadlocks. Re-run `sdd-validate` to write the section. |
-| 10 | `plan.md` is `approved`, tasks other than promote unchecked | **4 — Implement** | `sdd-implement` |
-| 11 | All tasks except promote checked, and no `verification.md` | **4.5 — Verify** | `sdd-verify`. The code was written; nobody has watched it run yet. |
-| 12 | `verification.md` is `fail` | **4 — Implement** | `sdd-implement`, scoped to what failed to run. Do not route to Validate — there is nothing to judge but a broken run. |
-| 13 | `verification.md` is `pass` but older than the newest source change | **4.5 — Verify** | `sdd-verify` again. The evidence describes code that no longer exists. |
-| 14 | `verification.md` is `pass`, and no `validation.md` | **5 — Validate** | `sdd-validate` |
-| 15 | `validation.md` is `pass` and `spec-delta.md` is `proposed` | **6 — Promote** | `sdd-promote` |
-| 16 | `validation.md` is `pass` and there is no `spec-delta.md` | **6 — Promote** | Only valid if the cycle genuinely changed nothing described in `spec/`. Confirm that with the human, then close the cycle without promoting. If it did change something, refine skipped an artifact — go back. |
-| 17 | `spec-delta.md` is `promoted`, or the promote task is checked | **Done** | Report and offer to close the branch. |
+| 3 | `request.md`, no `capability.md`, no `plan.md` | **1.5 — Capability** | `sdd-capability`. It classifies the size and either runs in full (Large) or records the size and steps aside (Small/Medium). |
+| 4 | `capability.md` has `applies: true` and `handoff:` names a blocking decision (`revisão de arquitetura`, `decisão de produto`) | **1.5 — Capability** | Stop. The handoff says a human owes a decision before refining. Name it and wait. |
+| 5 | `capability.md` exists (either `applies: false`, or `applies: true` with `handoff: pronto para refinar`), no `plan.md` | **2 — Refine** | `sdd-refine`, which reads `size` and the open questions from `capability.md` rather than re-deriving them. |
+| 6 | `plan.md` has no `status:` in frontmatter | **ERRO** | Stop. See *When the state is broken*. |
+| 7 | `plan.md` is `draft` **and** any task is checked | **ERRO** | Stop. Implementation happened without a gate. See below. |
+| 8 | `plan.md` is `draft` | **3 — Gate** | Stop. Ask the human to review and approve. Do not code. |
+| 9 | `validation.md` is `fail`, and its `## Correções — validação N` section has **unchecked** items | **4 — Implement** | `sdd-implement`, scoped to that section — not the whole checklist. |
+| 10 | `validation.md` is `fail`, and its `## Correções — validação N` items are **all checked** | **5 — Validate** | `sdd-validate`. The gaps were worked; re-validate to find out whether they closed. A `fail` whose corrections are done is a stale verdict, not a current one. |
+| 11 | `validation.md` is `fail`, `tasks.md` has **no** `## Correções` section, and every task except promote is checked | **ERRO** | Stop. Validate failed without making its gaps executable — every box is ticked, so implement has nothing to act on and the cycle deadlocks. Re-run `sdd-validate` to write the section. |
+| 12 | `plan.md` is `approved`, tasks other than promote unchecked | **4 — Implement** | `sdd-implement` |
+| 13 | All tasks except promote checked, and no `verification.md` | **4.5 — Verify** | `sdd-verify`. The code was written; nobody has watched it run yet. |
+| 14 | `verification.md` is `fail` | **4 — Implement** | `sdd-implement`, scoped to what failed to run. Do not route to Validate — there is nothing to judge but a broken run. |
+| 15 | `verification.md` is `pass` but older than the newest source change | **4.5 — Verify** | `sdd-verify` again. The evidence describes code that no longer exists. |
+| 16 | `verification.md` is `pass`, and no `validation.md` | **5 — Validate** | `sdd-validate` |
+| 17 | `validation.md` is `pass` and `spec-delta.md` is `proposed` | **6 — Promote** | `sdd-promote` |
+| 18 | `validation.md` is `pass` and there is no `spec-delta.md` | **6 — Promote** | Only valid if the cycle genuinely changed nothing described in `spec/`. Confirm that with the human, then close the cycle without promoting. If it did change something, refine skipped an artifact — go back. |
+| 19 | `spec-delta.md` is `promoted`, or the promote task is checked | **Done** | Report and offer to close the branch. |
+
+Rule 4 sits above rule 5 for the same reason the error states sit above the phases they
+resemble: a capability whose handoff names a blocking decision looks exactly like one that is
+ready to refine, and routing it into Refine walks past the decision it was raised to force.
 
 If nothing matches, say so rather than picking the closest rule. An unmatched state is a state
 this table does not model, and the human should hear that plainly.
@@ -140,6 +160,8 @@ human instead.
 | `plan.md` is `draft` but tasks are checked | Someone implemented before the gate | **PARE.** List which tasks are checked. Ask whether to approve retroactively (records `approved_at` today, noting it was after the fact) or to revert the work. |
 | `plan.md` is `approved` but `approved_at: null` | Approval recorded partially | Ask the human for the approval date, or set today's date and say you did. Minor — do not block on it. |
 | `tasks.md` or `scenarios.feature` missing while `plan.md` exists | Refine did not finish | Return to `sdd-refine` to complete the missing artifacts. Do not invent them — they were never reviewed. |
+| `capability.md` says `size: Large`, `plan.md` says `size: Small` or `Medium` | Refine re-derived the size instead of reading it | Ask which is right. The two disagreeing means one of them shaped `tasks.md` wrongly — a Large cycle planned as Medium has a flat checklist where it needed stages. |
+| `capability.md` missing while `plan.md` exists and says `size: Large` | Capability was skipped on a cycle that needed it | Not fatal, and do not rewrite the plan. Say so: the plan was written without a constraint pass. Offer to run `sdd-capability` retroactively — it often surfaces what the plan assumed silently. |
 | `validation.md` is `pass` but tasks are unchecked | Validation ran against the wrong state, or files changed after | Re-run `sdd-validate`. A stale pass is the one failure mode that puts a lie into `spec/`. |
 | `validation.md` is `pass` but there is no `verification.md` | Validate judged without runtime evidence | Re-run `sdd-verify`, then `sdd-validate`. A pass built on a code reading is exactly the claim this harness exists to stop trusting. |
 | Two cycle folders from the same day, user did not say which | Ambiguous | Ask. Guessing writes a plan into someone else's cycle. |
@@ -150,8 +172,9 @@ fix after you have acted on a guess.
 
 ## Cycle size
 
-Classified during Refine; it changes how `tasks.md` is shaped and how `sdd-implement`
-paces itself.
+Classified during **Capability** (phase 1.5) and recorded in `capability.md`; `sdd-refine`
+reads it from there. It decides two things: whether phase 1.5 runs in full, and how `tasks.md`
+is shaped — which in turn sets how `sdd-implement` paces itself.
 
 | Size | Rough signal | tasks.md shape |
 |---|---|---|

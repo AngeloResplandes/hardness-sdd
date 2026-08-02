@@ -108,8 +108,13 @@ judgment has to be made here — nobody upstream will make it for you.
 
 ## Then
 
-Once the human confirms `request.md` is right, the next phase is `sdd-refine`. Say so and let
-them trigger it, or ask if they want to go straight into refining.
+Once the human confirms `request.md` is right, the next phase is `sdd-capability`, which
+classifies the cycle's size and — if the work is Large — resolves the constraints that must
+hold before a plan is written. On Small and Medium cycles it records the size and steps
+straight aside to `sdd-refine`, so this is not an extra stop for ordinary work.
+
+Say so and let them trigger it, or ask if they want to continue now. Do not skip ahead to
+refine on your own: whether this cycle is Large is precisely what has not been decided yet.
 
 ## Closing report
 
@@ -120,7 +125,7 @@ human said; `erro` when you stopped without writing it.
 **Fase:** Start — <ok | atenção | erro>
 **Resultado:** <uma linha>
 **Artefatos:** <path do request.md>
-**Próximo passo:** leia e corrija o request — é o único documento que é seu. Depois: "refina o ciclo".
+**Próximo passo:** leia e corrija o request — é o único documento que é seu. Depois: "mapeia a capacidade" (classifica o tamanho e, se for Large, resolve as restrições antes do plano).
 ```
 
 The next step is always the human reading `request.md`. Never point at refine as if it were

@@ -23,6 +23,7 @@ você deixa de ser o único lugar onde o requisito existe.
 |---|---|---|
 | **`sdd`** | — | Orquestrador. Detecta em que fase o ciclo está e chama a skill certa. |
 | **`sdd-start`** | 1 | Abre a pasta do ciclo e escreve o `request.md`. |
+| **`sdd-capability`** | 1.5 | Classifica o tamanho. Em ciclo **Large**, escreve o `capability.md`: restrições, invariantes, fronteiras de confiança. |
 | **`sdd-refine`** | 2 + 3 | Pergunta tudo, escreve os 4 artefatos, **para** no portão e registra a aprovação. |
 | **`sdd-implement`** | 4 | Executa o `tasks.md` de cima pra baixo. Depura quando algo quebra. |
 | **`sdd-verify`** | 4.5 | Sobe o servidor, exercita os cenários no navegador, roda os testes. Gera evidência. |
@@ -36,6 +37,12 @@ como você já fala.
 A **fase 3 não tem skill** de propósito. Ela não é trabalho que se faz, é trabalho pra onde
 se **para**. Quem levanta o portão e quem registra a aprovação é a `sdd-refine`.
 
+A **fase 1.5 é condicional**. Em ciclo Small ou Medium ela só classifica o tamanho e sai do
+caminho — você nem percebe que passou por ela. Em ciclo **Large** ela roda inteira, porque aí
+o refino sozinho teria que descobrir as restrições *e* produzir quatro artefatos numa tacada
+só. É muito para um passo: o que acontece na prática é que a restrição só aparece no meio da
+implementação, que é justamente onde ela custa caro.
+
 **Verify e Validate são duas** porque quem roda não pode ser quem julga. A fase que sobe o
 servidor tem interesse em que ele funcione; a que decide se o ciclo está pronto não pode ter.
 Separadas, "eu rodei e vi funcionando" vira um artefato que a fase seguinte confere — junto,
@@ -44,12 +51,12 @@ seria só uma opinião com mais passos.
 ## Como funciona
 
 ```
-  VOCÊ escreve          CLAUDE pergunta        VOCÊ revisa       CLAUDE executa
-      │                       │                     │                  │
-  request.md  ──────►  plan.md + tasks.md  ──────►  ✋ APROVA  ──────►  código
-   sdd-start           scenarios.feature          (portão)         sdd-implement
-                       spec-delta.md                                    │
-                        sdd-refine                                      ▼
+  VOCÊ escreve      CLAUDE mapeia        CLAUDE pergunta      VOCÊ revisa    CLAUDE executa
+      │              (só Large)                │                   │               │
+  request.md ────► capability.md ────► plan.md + tasks.md ────► ✋ APROVA ────► código
+   sdd-start        sdd-capability     scenarios.feature       (portão)     sdd-implement
+                    restrições         spec-delta.md                              │
+                    invariantes         sdd-refine                                ▼
                                                              servidor + navegador
                                                                   + testes
                                                               verification.md
@@ -87,8 +94,8 @@ Ciclos acumulam; a spec continua única e correta.
 
 ## Instalação
 
-Copie as sete pastas (`sdd`, `sdd-start`, `sdd-refine`, `sdd-implement`, `sdd-verify`,
-`sdd-validate`, `sdd-promote`) para um dos dois lugares:
+Copie as oito pastas (`sdd`, `sdd-start`, `sdd-capability`, `sdd-refine`, `sdd-implement`,
+`sdd-verify`, `sdd-validate`, `sdd-promote`) para um dos dois lugares:
 
 ```bash
 # pessoal — vale em todos os seus projetos
@@ -117,6 +124,46 @@ Dispara sozinha quando você diz isso, ou "vamos construir X", ou "nova feature"
 O Claude cria a pasta do ciclo e escreve o `request.md` a partir do que você falou.
 **Leia e corrija.** É o único documento que é seu; tudo depois deriva dele.
 
+## Mapear a capacidade
+
+```
+mapeia a capacidade
+```
+
+Primeiro ele **classifica o tamanho** do ciclo. Se for Small ou Medium, ele diz isso e manda
+você direto pro refino — a fase acabou, custou uma linha. Se for **Large**, ela roda inteira.
+
+Large quer dizer: mais de um módulo, contrato novo entre serviços, migração de dado, ou
+trabalho que você não ia querer revisar num PR só.
+
+Nesse caso ele escreve o `capability.md`, que responde uma pergunta só:
+
+> **o que precisa ser verdade antes de a implementação começar?**
+
+Não é plano nem lista de tarefa. É a restrição que normalmente só existe na cabeça de quem já
+está no projeto há dois anos: invariantes (o que é verdade *sempre*, não só no caminho feliz),
+fronteiras de confiança, quem é dono de qual dado, quais transições de estado são
+irreversíveis, o que quebra em quem já consome o contrato.
+
+Três coisas que o arquivo faz e que são o ponto todo:
+
+- **Separa política fixa de preferência de arquitetura de questão em aberto.** Achatar os três
+  numa lista de bullets é como preferência reversível vira restrição que ninguém lembra de ter
+  escolhido, e como questão em aberto é fechada em silêncio por quem escrever o código primeiro.
+- **Marca o que é premissa.** Você consegue ler o arquivo e saber qual linha foi decidida e
+  qual foi inferida.
+- **Termina num handoff explícito** — `pronto para refinar`, `precisa de revisão de arquitetura`
+  ou `precisa de decisão de produto`. Se for um dos dois últimos, o orquestrador **para** ali:
+  refinar por cima de uma decisão pendente é resolvê-la por premissa, que é justamente o que
+  essa fase existe para impedir.
+
+Se o request contradiz algo que já existe — um contrato publicado, um invariante documentado —
+ele mostra os dois lados em vez de escolher o que faz o pedido caber. Conflito achado aqui
+custa uma conversa; o mesmo conflito achado na implementação custa a implementação.
+
+Ela **não** tem portão próprio. O portão continua sendo um só, o do plano — dois portões pro
+mesmo trabalho dobrariam o custo de revisão sem dobrar o benefício.
+
 ## Refinar
 
 ```
@@ -124,6 +171,10 @@ refina o ciclo
 ```
 
 Ele manda **uma mensagem só** com todas as perguntas, agrupadas e numeradas.
+
+Se o ciclo passou pela fase Capability, a lista vem **menor**: o que já foi resolvido lá não é
+perguntado de novo. Sobra o detalhe de UX e comportamento, mais as questões que o
+`capability.md` deixou explicitamente em aberto.
 
 Responda tudo de uma vez. É pra isso que serve o formato — você paga um custo de contexto em
 vez de quinze. Se ele sugerir defaults, dá pra responder assim:
@@ -308,6 +359,15 @@ não tinha pensado.
 **Editar a pasta do ciclo depois de fechado.** Ela é o registro histórico de por que a spec diz
 o que diz. Mudou de ideia? Ciclo novo, delta novo.
 
+**Escrever tarefa disfarçada de restrição no `capability.md`.** "Criar o endpoint `/episodes`"
+é tarefa, não restrição. O teste é mecânico: se a linha precisaria ser editada numa reescrita
+completa da implementação — com o mesmo comportamento visível pro usuário — ela é implementação
+e está no arquivo errado.
+
+**Deixar o `capability.md` bonito preenchendo o que ninguém decidiu.** Seção vazia é honesta:
+diz que ninguém pensou nisso ainda. Seção inventada é restrição que ninguém combinou, e o plano
+herda como se tivesse combinado.
+
 **Cenário descrevendo implementação.** `Então a chave "ehr_token" é gravada no localStorage`
 quebra numa refatoração que não mudou nada pro usuário. O certo é `Então ele continua vendo a
 lista sem precisar logar de novo`.
@@ -333,6 +393,10 @@ O que o harness contém:
 ├── sdd-start/
 │   ├── SKILL.md
 │   └── assets/request.md
+├── sdd-capability/
+│   ├── SKILL.md            # tamanho, restrições, invariantes, handoff
+│   ├── assets/capability.md
+│   └── references/constraints.md   # restrição bem escrita vs. inútil
 ├── sdd-refine/
 │   ├── SKILL.md            # perguntas, artefatos, portão, registro da aprovação
 │   ├── references/
@@ -362,6 +426,7 @@ seu-repo/
 │   └── Q32026/
 │       └── 0726-episodes-list-webcomponent/
 │           ├── request.md          ← você escreve       (sdd-start)
+│           ├── capability.md       ← restrições, só Large (sdd-capability)
 │           ├── plan.md             ← draft → approved   (sdd-refine)
 │           ├── scenarios.feature   ←                    (sdd-refine)
 │           ├── tasks.md            ←                    (sdd-refine)
